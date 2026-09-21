@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build files
+dist/
+build/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase service account / credentials
+serviceAccountKey.json
+firebase-adminsdk-*.json
+ 
+# Voice training dataset
+backend/dataset/
+# AI voice model and local fingerprint
+*.pkl
+*.joblib
+*.npy
+backend/speaker_reference/
+backend/uvicorn
