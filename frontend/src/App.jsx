@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { db, auth } from "./firebase";
 import {
   onAuthStateChanged,
+  signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -1697,17 +1698,26 @@ function App() {
     const unsubscribe =
       onAuthStateChanged(
         auth,
-        (user) => {
+        async (user) => {
           setCurrentUser(user);
-          setAuthLoading(false);
 
           if (user) {
+            setAuthLoading(false);
             loadHistory();
             loadFraudReports();
             checkSpeakerReference();
           } else {
-            setHistory([]);
-            setFraudReports([]);
+            try {
+              await signInAnonymously(auth);
+            } catch (e) {
+              console.error(
+                "Anonymous Firebase sign-in failed:",
+                e
+              );
+              setAuthLoading(false);
+              setHistory([]);
+              setFraudReports([]);
+            }
           }
         }
       );
@@ -2850,6 +2860,8 @@ function App() {
       setCallMonitoring(true);
       setCallSeconds(0);
       setIncomingCall(false);
+      setCallResult(null);
+      setCallAnalyzing(false);
 
       callActiveRef.current =
         true;
@@ -4739,342 +4751,6 @@ function App() {
   }
 
   /* =========================================================
-     LOGIN
-  ========================================================= */
-
-  if (!currentUser) {
-    return (
-      <div
-        className={`auth-page ${
-          theme === "light"
-            ? "light-theme"
-            : "dark-theme"
-        }`}
-      >
-        <header className="vox-auth-topbar">
-          <button
-            className="vox-auth-brand"
-            onClick={() =>
-              setAuthMode(
-                "login"
-              )
-            }
-          >
-            <span className="vox-brand-shield">
-              〽
-            </span>
-
-            <span className="vox-brand-copy">
-              <b>
-                ECHOGUARD{" "}
-                <em>AI</em>
-              </b>
-
-              <small>
-                AI Voice Security
-              </small>
-            </span>
-          </button>
-
-          <button
-            className="vox-auth-theme"
-            onClick={
-              toggleTheme
-            }
-          >
-            {theme ===
-            "dark"
-              ? "☀"
-              : "☾"}
-          </button>
-        </header>
-
-        <main className="vox-auth-main">
-          <section className="vox-auth-hero">
-            <div className="vox-auth-badge">
-              ● AI VOICE SECURITY
-              PLATFORM
-            </div>
-
-            <h1>
-              Detect. Verify.
-              <br />
-              <strong>
-                Protect Every Voice.
-              </strong>
-            </h1>
-
-            <p>
-              EchoGuard AI analyzes
-              voice signals for
-              synthetic audio and
-              impersonation risk.
-            </p>
-
-            <div className="vox-feature-row">
-              <div className="vox-feature">
-                〽
-                <b>
-                  AI / Spoof
-                  <br />
-                  Detection
-                </b>
-              </div>
-
-              <i />
-
-              <div className="vox-feature">
-                ♙
-                <b>
-                  Speaker
-                  <br />
-                  Consistency
-                </b>
-              </div>
-
-              <i />
-
-              <div className="vox-feature">
-                ♢
-                <b>
-                  Dynamic
-                  <br />
-                  Risk Analysis
-                </b>
-              </div>
-            </div>
-          </section>
-
-          <section className="vox-login-card">
-            <div className="vox-login-brand">
-              <span className="vox-card-shield">
-                〽
-              </span>
-
-              <span>
-                <b>
-                  ECHOGUARD{" "}
-                  <em>AI</em>
-                </b>
-
-                <small>
-                  AI Voice Security
-                </small>
-              </span>
-            </div>
-
-            <div className="vox-secure-label">
-              ⌕ SECURE ACCESS
-            </div>
-
-            <h2>
-              {authMode ===
-              "login"
-                ? "Welcome Back 👋"
-                : "Create Account"}
-            </h2>
-
-            <p>
-              {authMode ===
-              "login"
-                ? "Sign in to open your voice security dashboard."
-                : "Create your secure EchoGuard AI account."}
-            </p>
-
-            <div className="vox-login-tabs">
-              <button
-                className={
-                  authMode ===
-                  "login"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setAuthMode(
-                    "login"
-                  )
-                }
-              >
-                Sign In
-              </button>
-
-              <button
-                className={
-                  authMode ===
-                  "signup"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setAuthMode(
-                    "signup"
-                  )
-                }
-              >
-                Sign Up
-              </button>
-            </div>
-
-            <form
-              onSubmit={
-                handleAuthSubmit
-              }
-              className="vox-login-form"
-            >
-              {authMode ===
-                "signup" && (
-                <input
-                  value={
-                    authName
-                  }
-                  onChange={(e) =>
-                    setAuthName(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Full name"
-                />
-              )}
-
-              <input
-                type="email"
-                value={
-                  authEmail
-                }
-                onChange={(e) =>
-                  setAuthEmail(
-                    e.target.value
-                  )
-                }
-                placeholder="Email address"
-              />
-
-              <div className="password-wrap">
-                <input
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  value={
-                    authPassword
-                  }
-                  onChange={(e) =>
-                    setAuthPassword(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Password"
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      (v) => !v
-                    )
-                  }
-                >
-                  {showPassword
-                    ? "◉"
-                    : "◌"}
-                </button>
-              </div>
-
-              {authMode ===
-                "login" && (
-                <div className="vox-auth-options">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={
-                        rememberMe
-                      }
-                      onChange={(e) =>
-                        setRememberMe(
-                          e.target
-                            .checked
-                        )
-                      }
-                    />
-                    Remember me
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={
-                      handleForgotPassword
-                    }
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
-
-              {authError && (
-                <div className="vox-auth-message">
-                  {authError}
-                </div>
-              )}
-
-              <button
-                className="vox-submit"
-                disabled={
-                  authBusy
-                }
-              >
-                {authBusy
-                  ? "PLEASE WAIT..."
-                  : authMode ===
-                    "login"
-                  ? "Sign In →"
-                  : "Create Account →"}
-              </button>
-            </form>
-
-            <div className="vox-divider">
-              OR
-            </div>
-
-            <button
-              className="vox-google"
-              onClick={
-                handleGoogleSignIn
-              }
-            >
-              <strong>G</strong>{" "}
-              Continue with Google
-            </button>
-
-            <div className="vox-account-switch">
-              {authMode ===
-              "login"
-                ? "Don't have an account?"
-                : "Already have an account?"}
-
-              <button
-                onClick={() =>
-                  setAuthMode(
-                    authMode ===
-                      "login"
-                      ? "signup"
-                      : "login"
-                  )
-                }
-              >
-                {authMode ===
-                "login"
-                  ? "Sign Up"
-                  : "Sign In"}
-              </button>
-            </div>
-          </section>
-        </main>
-      </div>
-    );
-  }
-
-  /* =========================================================
      MAIN APPLICATION
   ========================================================= */
 
@@ -5307,49 +4983,86 @@ function App() {
                 <PanelTitle
                   icon="◉"
                   title="Live Voice Monitor"
-                  sub="Actual microphone waveform and frequency"
-                  right="● ONLINE"
+                  sub="Live waveform, frequency and 5-second AI voice checks"
+                  right={
+                    callMonitoring
+                      ? "● AI MONITORING"
+                      : "STANDBY"
+                  }
                 />
 
                 <WaveCanvas
                   stream={
-                    recordingStream
+                    callStream
                   }
                   active={
-                    isRecording
+                    callMonitoring
                   }
                 />
 
                 <FrequencyCanvas
                   stream={
-                    recordingStream
+                    callStream
                   }
                   active={
-                    isRecording
+                    callMonitoring
                   }
                 />
 
                 <Spectrogram
                   active={
-                    isRecording
+                    callMonitoring
                   }
                 />
 
+                {callAnalyzing && (
+                  <div className="empty">
+                    Analyzing the latest 5-second voice segment...
+                  </div>
+                )}
+
+                {callResult && !callAnalyzing && (
+                  <div
+                    className={`result-banner ${riskClass(
+                      callResult.risk_level
+                    )}`}
+                  >
+                    <span>
+                      {callResult.status ||
+                        callResult.risk_level ||
+                        "Analysis complete"}
+                    </span>
+                    <b>
+                      {Number(
+                        callResult.confidence ||
+                          0
+                      ).toFixed(0)}
+                      %
+                    </b>
+                  </div>
+                )}
+
+                {callAlert && (
+                  <div className="fraud-warning">
+                    {callAlert}
+                  </div>
+                )}
+
                 <button
                   className={
-                    isRecording
+                    callMonitoring
                       ? "danger-btn large"
                       : "primary-btn large"
                   }
                   onClick={
-                    isRecording
-                      ? stopRecording
-                      : startRecording
+                    callMonitoring
+                      ? stopCallMonitoring
+                      : startCallMonitoring
                   }
                 >
-                  {isRecording
-                    ? "STOP LIVE MONITOR"
-                    : "START LIVE MONITOR"}
+                  {callMonitoring
+                    ? "STOP LIVE AI MONITOR"
+                    : "START LIVE AI MONITOR"}
                 </button>
               </section>
             </GenericPage>
